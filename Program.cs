@@ -18,8 +18,8 @@ builder.Host.UseSerilog((context, services, configuration) =>
 
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
-    options.EnableSensitiveDataLogging();
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
+    //options.EnableSensitiveDataLogging();
+    options.UseSqlServer(builder.Configuration.GetConnectionString("RemoteConnection"));
 });
 
 var app = builder.Build();
