@@ -1,4 +1,6 @@
-﻿namespace UserTaskManagement.API.Controllers;
+﻿using Mapster;
+
+namespace UserTaskManagement.API.Controllers;
 
 [ApiController]
 public class UsersController : ControllerBase
@@ -35,7 +37,7 @@ public class UsersController : ControllerBase
         var totalRecords = await query.CountAsync();
 
         var users = await query
-            .Select(UserMapper.GetDto())
+            .ProjectToType<GetUserDto>()
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();
@@ -57,7 +59,7 @@ public class UsersController : ControllerBase
     public async Task<IActionResult> GetUserById(int id)
     {
         var user = await _context.Users
-            .Select(UserMapper.GetDto())
+            .ProjectToType<GetUserDto>()
             .SingleOrDefaultAsync(x => x.Id == id);
 
         if (user is null)
@@ -79,7 +81,7 @@ public class UsersController : ControllerBase
     [HttpPost(ApiSystemRouts.Users.Add)]
     public async Task<IActionResult> AddUser(AddUserDto userDto)
     {
-        var newUser = userDto.ToUser();
+        var newUser = userDto.Adapt<User>();
         await _context.Users.AddAsync(newUser);
         await _context.SaveChangesAsync();
 
@@ -106,7 +108,9 @@ public class UsersController : ControllerBase
             return NotFound(errorResponse);
         }
 
-        user.Update(userDto);
+        user.FirstName = userDto.FirstName;
+        user.LastName = userDto.LastName;
+
         await _context.SaveChangesAsync();
 
         var response = BaseResponse<object>.SuccessResponse(null, "User updated successfully");

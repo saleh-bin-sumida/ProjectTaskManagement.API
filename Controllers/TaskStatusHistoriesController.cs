@@ -1,4 +1,6 @@
-﻿namespace ProjectTaskManagement.API.Controllers;
+﻿using Mapster;
+
+namespace ProjectTaskManagement.API.Controllers;
 
 [ApiController]
 public class TaskStatusHistoriesController : ControllerBase
@@ -27,14 +29,7 @@ public class TaskStatusHistoriesController : ControllerBase
         var tasksStatusHistories = await query
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
-            .Select(x => new GetTaskStatusHistoryDto
-            {
-                Id = x.Id,
-                TaskName = x.TaskAssignment.Task.Name,
-                ByUser = x.TaskAssignment.User.FirstName,
-                ChangedToStatus = x.Status.Name,
-                Date = x.Date
-            })
+            .ProjectToType<GetTaskStatusHistoryDto>()
             .ToListAsync();
 
         return Ok(tasksStatusHistories);

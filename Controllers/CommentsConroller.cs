@@ -1,4 +1,6 @@
-﻿namespace CommentTaskManagement.API.Controllers;
+﻿using Mapster;
+
+namespace CommentTaskManagement.API.Controllers;
 
 [ApiController]
 public class CommentsController : ControllerBase
@@ -28,7 +30,7 @@ public class CommentsController : ControllerBase
         var comments = await query
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
-            .Select(CommentMapper.GetDto())
+            .ProjectToType<GetCommentDto>()
             .ToListAsync();
 
         var pagedResult = PagedResult<GetCommentDto>.Create(comments, totalRecords, pageNumber, pageSize);
@@ -46,7 +48,7 @@ public class CommentsController : ControllerBase
     public async Task<IActionResult> GetCommentById(int id)
     {
         var comment = await _context.Comments
-            .Select(CommentMapper.GetDto())
+            .ProjectToType<GetCommentDto>()
             .FirstOrDefaultAsync(x => x.Id == id);
 
 
@@ -70,7 +72,7 @@ public class CommentsController : ControllerBase
 
 
 
-        var newComment = commentDto.ToComment();
+        var newComment = commentDto.Adapt<Comment>();
         await _context.Comments.AddAsync(newComment);
         await _context.SaveChangesAsync();
 
@@ -92,7 +94,7 @@ public class CommentsController : ControllerBase
         if (comment is null)
             return NotFound($"no comment with Id {id}");
 
-        comment.Update(commentDto);
+        comment.Message = commentDto.Message;
         await _context.SaveChangesAsync();
 
         return NoContent();

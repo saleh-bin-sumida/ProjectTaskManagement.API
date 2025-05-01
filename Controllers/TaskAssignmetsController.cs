@@ -27,7 +27,8 @@ public class TaskAssignmetsController : ControllerBase
         var taskAssignments = await query
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
-            .Select(TaskAssignmentMapper.GetDto())
+            .ProjectToType<GetTaskAssignmentDto>()
+
             .ToListAsync();
 
         var pagedResult = PagedResult<GetTaskAssignmentDto>.Create(taskAssignments, totalRecords, pageNumber, pageSize);
@@ -50,7 +51,7 @@ public class TaskAssignmetsController : ControllerBase
         var taskAssignments = await query
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
-            .Select(TaskAssignmentMapper.GetDto())
+            .ProjectToType<GetTaskAssignmentDto>()
             .ToListAsync();
 
         var pagedResult = PagedResult<GetTaskAssignmentDto>.Create(taskAssignments, totalRecords, pageNumber, pageSize);
@@ -73,7 +74,7 @@ public class TaskAssignmetsController : ControllerBase
         var taskAssignments = await query
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
-            .Select(TaskAssignmentMapper.GetDto())
+            .ProjectToType<GetTaskAssignmentDto>()
             .ToListAsync();
 
         var pagedResult = PagedResult<GetTaskAssignmentDto>.Create(taskAssignments, totalRecords, pageNumber, pageSize);
@@ -91,7 +92,7 @@ public class TaskAssignmetsController : ControllerBase
     public async Task<IActionResult> GetTaskAssignmentById(int id)
     {
         var taskassignment = await _context.TaskAssignments
-            .Select(TaskAssignmentMapper.GetDto())
+            .ProjectToType<GetTaskAssignmentDto>()
             .FirstOrDefaultAsync(x => x.Id == id);
 
 
@@ -118,7 +119,7 @@ public class TaskAssignmetsController : ControllerBase
             return BadRequest("invalid task id!");
 
 
-        var newTaskAssignment = taskassignmentDto.ToTaskAssignment();
+        var newTaskAssignment = taskassignmentDto.Adapt<TaskAssignment>();
 
         await _context.TaskAssignments.AddAsync(newTaskAssignment);
         await _context.SaveChangesAsync();

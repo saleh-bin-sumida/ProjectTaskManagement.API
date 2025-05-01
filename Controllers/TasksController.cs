@@ -1,4 +1,6 @@
-﻿namespace ProjectTaskManagement.API.Controllers;
+﻿using Mapster;
+
+namespace ProjectTaskManagement.API.Controllers;
 
 [ApiController]
 
@@ -27,7 +29,7 @@ public class TasksController : ControllerBase
         var tasks = await query
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
-            .Select(TaskMapper.GetDto())
+            .ProjectToType<GetTaskDto>()
             .ToListAsync();
 
         var pagedResult = PagedResult<GetTaskDto>.Create(tasks, totalRecords, pageNumber, pageSize);
@@ -46,7 +48,7 @@ public class TasksController : ControllerBase
     public async Task<IActionResult> GetTaskById(int id)
     {
         var task = await _context.Tasks
-            .Select(TaskMapper.GetDto())
+            .ProjectToType<GetTaskDto>()
             .FirstOrDefaultAsync(x => x.Id == id);
 
         if (task is null)
@@ -75,7 +77,7 @@ public class TasksController : ControllerBase
             return BadRequest(errorResponse);
         }
 
-        var newTask = taskDto.ToTask();
+        var newTask = taskDto.Adapt<Task>();
         await _context.Tasks.AddAsync(newTask);
         await _context.SaveChangesAsync();
 

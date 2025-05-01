@@ -1,4 +1,6 @@
-﻿namespace ProjectTaskManagement.API.Controllers;
+﻿using Mapster;
+
+namespace ProjectTaskManagement.API.Controllers;
 
 [ApiController]
 public class ProjectsController(AppDbContext _context) : ControllerBase
@@ -15,8 +17,7 @@ public class ProjectsController(AppDbContext _context) : ControllerBase
     public async Task<IActionResult> GetAllProject()
     {
         var projects = await _context.Projects
-            .Select(ProjectMapper.GetDto())
-        .ToListAsync();
+            .ProjectToType<GetProjectDto>().ToListAsync();
 
         var response = BaseResponse<IEnumerable<GetProjectDto>>.SuccessResponse(projects);
         return Ok(response);
@@ -33,7 +34,7 @@ public class ProjectsController(AppDbContext _context) : ControllerBase
     public async Task<IActionResult> GetProjectById(int id)
     {
         var project = await _context.Projects
-            .Select(ProjectMapper.GetDto())
+            .ProjectToType<GetProjectDto>()
             .SingleOrDefaultAsync(x => x.Id == id);
 
         if (project is null)
@@ -51,7 +52,7 @@ public class ProjectsController(AppDbContext _context) : ControllerBase
     [HttpPost(ApiSystemRouts.Projects.Add)]
     public async Task<IActionResult> AddProject(AddProjectDto projectDto)
     {
-        var newProject = projectDto.ToProject();
+        var newProject = projectDto.Adapt<Project>();
         await _context.Projects.AddAsync(newProject);
         await _context.SaveChangesAsync();
 
@@ -76,7 +77,9 @@ public class ProjectsController(AppDbContext _context) : ControllerBase
         if (project is null)
             return NotFound($"no project with Id {id}");
 
-        project.Update(projectDto);
+        project.Name = projectDto.Name;
+        project.Description = projectDto.Description;
+
         await _context.SaveChangesAsync();
 
         return NoContent();
