@@ -1,3 +1,4 @@
+using ProjectTaskManagement.API;
 using Swashbuckle.AspNetCore.SwaggerUI;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -5,6 +6,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
+builder.Services.ConfigMapster();
 
 
 builder.Services.AddDbContext<AppDbContext>(options =>
