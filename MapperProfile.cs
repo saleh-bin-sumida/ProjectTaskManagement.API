@@ -1,6 +1,4 @@
-﻿using Mapster;
-
-namespace ProjectTaskManagement.API;
+﻿namespace ProjectTaskManagement.API;
 
 public static class MapperProfile
 {
