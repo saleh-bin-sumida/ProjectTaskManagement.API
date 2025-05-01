@@ -4,10 +4,12 @@
 public class TaskAssignmetsController : ControllerBase
 {
     private readonly AppDbContext _context;
+    private readonly ILogger<TaskAssignmetsController> _logger;
 
-    public TaskAssignmetsController(AppDbContext context)
+    public TaskAssignmetsController(AppDbContext context, ILogger<TaskAssignmetsController> logger)
     {
         _context = context;
+        _logger = logger;
     }
 
     #region Task Assignment Endpoints
@@ -24,11 +26,12 @@ public class TaskAssignmetsController : ControllerBase
     {
         var query = _context.TaskAssignments;
         var totalRecords = await query.CountAsync();
+        _logger.LogInformation("Total task assignments retrieved: {TotalRecords}", totalRecords);
+
         var taskAssignments = await query
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
             .ProjectToType<GetTaskAssignmentDto>()
-
             .ToListAsync();
 
         var pagedResult = PagedResult<GetTaskAssignmentDto>.Create(taskAssignments, totalRecords, pageNumber, pageSize);
@@ -48,6 +51,8 @@ public class TaskAssignmetsController : ControllerBase
     {
         var query = _context.TaskAssignments.Where(x => x.TaskId == taskId);
         var totalRecords = await query.CountAsync();
+        _logger.LogInformation("Total task assignments for task {TaskId} retrieved: {TotalRecords}", taskId, totalRecords);
+
         var taskAssignments = await query
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
@@ -63,7 +68,7 @@ public class TaskAssignmetsController : ControllerBase
     /// </summary>
     /// <param name="userId">The ID of the user.</param>
     /// <param name="pageNumber">The page number.</param>
-    /// <param="pageSize">The number of items per page.</param>
+    /// <param name="pageSize">The number of items per page.</param>
     /// <returns>A paginated list of task assignments.</returns>
     [ProducesResponseType(StatusCodes.Status200OK)]
     [HttpGet(ApiSystemRouts.TaskAssignments.GetByUserId)]
@@ -71,6 +76,8 @@ public class TaskAssignmetsController : ControllerBase
     {
         var query = _context.TaskAssignments.Where(x => x.UserId == userId);
         var totalRecords = await query.CountAsync();
+        _logger.LogInformation("Total task assignments for user {UserId} retrieved: {TotalRecords}", userId, totalRecords);
+
         var taskAssignments = await query
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
@@ -95,9 +102,11 @@ public class TaskAssignmetsController : ControllerBase
             .ProjectToType<GetTaskAssignmentDto>()
             .FirstOrDefaultAsync(x => x.Id == id);
 
-
         if (taskassignment is null)
+        {
+            _logger.LogWarning("No task assignment found with Id {Id}", id);
             return NotFound($"no task assignment with Id {id}");
+        }
 
         return Ok(taskassignment);
     }
@@ -111,19 +120,24 @@ public class TaskAssignmetsController : ControllerBase
     [HttpPost(ApiSystemRouts.TaskAssignments.AssignUserToTask)]
     public async Task<IActionResult> AssignUserToTask(AddTaskAssignmentDto taskassignmentDto)
     {
-
         if (!await _context.Users.AnyAsync(x => x.Id == taskassignmentDto.UserId))
+        {
+            _logger.LogWarning("Invalid user id {UserId} provided", taskassignmentDto.UserId);
             return BadRequest("invalid user id!");
+        }
 
         if (!await _context.Tasks.AnyAsync(x => x.Id == taskassignmentDto.TaskId))
+        {
+            _logger.LogWarning("Invalid task id {TaskId} provided", taskassignmentDto.TaskId);
             return BadRequest("invalid task id!");
-
+        }
 
         var newTaskAssignment = taskassignmentDto.Adapt<TaskAssignment>();
 
         await _context.TaskAssignments.AddAsync(newTaskAssignment);
         await _context.SaveChangesAsync();
 
+        _logger.LogInformation("User {UserId} assigned to task {TaskId}", taskassignmentDto.UserId, taskassignmentDto.TaskId);
         return Created();
     }
 

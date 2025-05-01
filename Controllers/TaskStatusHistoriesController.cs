@@ -1,15 +1,15 @@
-﻿using Mapster;
-
-namespace ProjectTaskManagement.API.Controllers;
+﻿namespace ProjectTaskManagement.API.Controllers;
 
 [ApiController]
 public class TaskStatusHistoriesController : ControllerBase
 {
     private readonly AppDbContext _context;
+    private readonly ILogger<TaskStatusHistoriesController> _logger;
 
-    public TaskStatusHistoriesController(AppDbContext context)
+    public TaskStatusHistoriesController(AppDbContext context, ILogger<TaskStatusHistoriesController> logger)
     {
         _context = context;
+        _logger = logger;
     }
 
     #region Task Status History Endpoints
@@ -26,6 +26,8 @@ public class TaskStatusHistoriesController : ControllerBase
     {
         var query = _context.TaskStatusHistories;
         var totalRecords = await query.CountAsync();
+        _logger.LogInformation("Total task status histories retrieved: {TotalRecords}", totalRecords);
+
         var tasksStatusHistories = await query
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)

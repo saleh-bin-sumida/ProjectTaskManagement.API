@@ -1,9 +1,7 @@
-﻿using Mapster;
-
-namespace ProjectTaskManagement.API.Controllers;
+﻿namespace ProjectTaskManagement.API.Controllers;
 
 [ApiController]
-public class ProjectsController(AppDbContext _context) : ControllerBase
+public class ProjectsController(AppDbContext _context, ILogger<ProjectsController> _logger) : ControllerBase
 {
 
     #region Project Endpoints
@@ -20,6 +18,7 @@ public class ProjectsController(AppDbContext _context) : ControllerBase
             .ProjectToType<GetProjectDto>().ToListAsync();
 
         var response = BaseResponse<IEnumerable<GetProjectDto>>.SuccessResponse(projects);
+        _logger.LogInformation("GetAllProject executed successfully with {Count} projects", projects.Count());
         return Ok(response);
     }
 
@@ -38,8 +37,12 @@ public class ProjectsController(AppDbContext _context) : ControllerBase
             .SingleOrDefaultAsync(x => x.Id == id);
 
         if (project is null)
+        {
+            _logger.LogWarning("GetProjectById failed. No project found with Id: {Id}", id);
             return NotFound($"no project with Id {id}");
+        }
 
+        _logger.LogInformation("GetProjectById executed successfully for Id: {Id}", id);
         return Ok(project);
     }
 
@@ -56,6 +59,7 @@ public class ProjectsController(AppDbContext _context) : ControllerBase
         await _context.Projects.AddAsync(newProject);
         await _context.SaveChangesAsync();
 
+        _logger.LogInformation("AddProject executed successfully for Name: {Name}", projectDto.Name);
         return Created();
     }
 
@@ -70,18 +74,24 @@ public class ProjectsController(AppDbContext _context) : ControllerBase
     public async Task<IActionResult> UpdateProject(int id, UpdateProjectDto projectDto)
     {
         if (id != projectDto.Id)
+        {
+            _logger.LogWarning("UpdateProject failed. Invalid Id: {Id}", id);
             return BadRequest("invalid Id");
+        }
 
         var project = await _context.Projects.FindAsync(id);
 
         if (project is null)
+        {
+            _logger.LogWarning("UpdateProject failed. No project found with Id: {Id}", id);
             return NotFound($"no project with Id {id}");
+        }
 
         project.Name = projectDto.Name;
         project.Description = projectDto.Description;
 
         await _context.SaveChangesAsync();
-
+        _logger.LogInformation("UpdateProject executed successfully for Id: {Id}", id);
         return NoContent();
     }
 
@@ -98,8 +108,12 @@ public class ProjectsController(AppDbContext _context) : ControllerBase
         var rows = await _context.Projects.Where(x => x.Id == id).ExecuteDeleteAsync();
 
         if (rows > 0)
-            return Ok("Project Deleted Succfuly");
+        {
+            _logger.LogInformation("DeleteProject executed successfully for Id: {Id}", id);
+            return Ok("Project Deleted Successfully");
+        }
 
+        _logger.LogWarning("DeleteProject failed. No project found with Id: {Id}", id);
         return NotFound($"no project with Id {id}");
     }
 

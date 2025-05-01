@@ -1,15 +1,15 @@
-﻿using Mapster;
-
-namespace UserTaskManagement.API.Controllers;
+﻿namespace UserTaskManagement.API.Controllers;
 
 [ApiController]
 public class UsersController : ControllerBase
 {
     private readonly AppDbContext _context;
+    private readonly ILogger<UsersController> _logger;
 
-    public UsersController(AppDbContext context)
+    public UsersController(AppDbContext context, ILogger<UsersController> logger)
     {
         _context = context;
+        _logger = logger;
     }
 
     #region User Endpoints
@@ -42,6 +42,8 @@ public class UsersController : ControllerBase
             .Take(pageSize)
             .ToListAsync();
 
+        _logger.LogInformation("Retrieved {UserCount} users for page {PageNumber} with page size {PageSize}.", users.Count, pageNumber, pageSize);
+
         var pagedResult = PagedResult<GetUserDto>.Create(users, totalRecords, pageNumber, pageSize);
 
         var response = BaseResponse<PagedResult<GetUserDto>>.SuccessResponse(pagedResult);
@@ -64,10 +66,12 @@ public class UsersController : ControllerBase
 
         if (user is null)
         {
+            _logger.LogWarning("No user found with Id {UserId}.", id);
             var errorResponse = BaseResponse<object>.ErrorResponse($"No user found with Id {id}");
             return NotFound(errorResponse);
         }
 
+        _logger.LogInformation("Retrieved user with Id {UserId}.", id);
         var response = BaseResponse<GetUserDto>.SuccessResponse(null);
         return Ok(response);
     }
@@ -84,6 +88,8 @@ public class UsersController : ControllerBase
         var newUser = userDto.Adapt<User>();
         await _context.Users.AddAsync(newUser);
         await _context.SaveChangesAsync();
+
+        _logger.LogInformation("Added new user with Id {UserId}.", newUser.Id);
 
         var response = BaseResponse<object>.SuccessResponse(null, "User added successfully");
         return CreatedAtAction(nameof(GetUserById), new { id = newUser.Id }, response);
@@ -104,6 +110,7 @@ public class UsersController : ControllerBase
 
         if (user is null)
         {
+            _logger.LogWarning("No user found with Id {UserId} for update.", id);
             var errorResponse = BaseResponse<object>.ErrorResponse($"No user found with Id {id}");
             return NotFound(errorResponse);
         }
@@ -112,6 +119,8 @@ public class UsersController : ControllerBase
         user.LastName = userDto.LastName;
 
         await _context.SaveChangesAsync();
+
+        _logger.LogInformation("Updated user with Id {UserId}.", id);
 
         var response = BaseResponse<object>.SuccessResponse(null, "User updated successfully");
         return Ok(response);
@@ -131,10 +140,12 @@ public class UsersController : ControllerBase
 
         if (rows > 0)
         {
+            _logger.LogInformation("Deleted user with Id {UserId}.", id);
             var response = BaseResponse<object>.SuccessResponse(null, "User deleted successfully");
             return Ok(response);
         }
 
+        _logger.LogWarning("No user found with Id {UserId} for deletion.", id);
         var errorResponse = BaseResponse<object>.ErrorResponse($"No user found with Id {id}");
         return NotFound(errorResponse);
     }

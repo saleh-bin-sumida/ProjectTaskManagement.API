@@ -1,15 +1,15 @@
-﻿using Mapster;
-
-namespace CommentTaskManagement.API.Controllers;
+﻿namespace CommentTaskManagement.API.Controllers;
 
 [ApiController]
 public class CommentsController : ControllerBase
 {
     private readonly AppDbContext _context;
+    private readonly ILogger<CommentsController> _logger;
 
-    public CommentsController(AppDbContext context)
+    public CommentsController(AppDbContext context, ILogger<CommentsController> logger)
     {
         _context = context;
+        _logger = logger;
     }
 
     #region Comment Endpoints
@@ -27,6 +27,8 @@ public class CommentsController : ControllerBase
     {
         var query = _context.Comments.Where(x => x.TaskAssignmentId == taskAssigmentId);
         var totalRecords = await query.CountAsync();
+        _logger.LogInformation("Total comments retrieved for TaskAssignmentId {TaskAssignmentId}: {TotalRecords}", taskAssigmentId, totalRecords);
+
         var comments = await query
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)

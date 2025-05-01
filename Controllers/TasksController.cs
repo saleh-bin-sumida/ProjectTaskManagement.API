@@ -1,16 +1,16 @@
-﻿using Mapster;
-
-namespace ProjectTaskManagement.API.Controllers;
+﻿namespace ProjectTaskManagement.API.Controllers;
 
 [ApiController]
 
 public class TasksController : ControllerBase
 {
     private readonly AppDbContext _context;
+    private readonly ILogger<TasksController> _logger;
 
-    public TasksController(AppDbContext context)
+    public TasksController(AppDbContext context, ILogger<TasksController> logger)
     {
         _context = context;
+        _logger = logger;
     }
 
     /// <summary>
@@ -33,8 +33,8 @@ public class TasksController : ControllerBase
             .ToListAsync();
 
         var pagedResult = PagedResult<GetTaskDto>.Create(tasks, totalRecords, pageNumber, pageSize);
-        var response = BaseResponse<PagedResult<GetTaskDto>>.SuccessResponse(pagedResult);
-        return Ok(response);
+        _logger.LogInformation("GetAllTaskByProject executed successfully for ProjectId: {ProjectId}", projectId);
+        return Ok(BaseResponse<PagedResult<GetTaskDto>>.SuccessResponse(pagedResult));
     }
 
     /// <summary>
@@ -53,12 +53,12 @@ public class TasksController : ControllerBase
 
         if (task is null)
         {
-            var errorResponse = BaseResponse<object>.ErrorResponse($"No task found with Id {id}");
-            return NotFound(errorResponse);
+            _logger.LogWarning("GetTaskById failed. No task found with Id: {Id}", id);
+            return NotFound(BaseResponse<object>.ErrorResponse($"No task found with Id {id}"));
         }
 
-        var response = BaseResponse<GetTaskDto>.SuccessResponse(task);
-        return Ok(response);
+        _logger.LogInformation("GetTaskById executed successfully for Id: {Id}", id);
+        return Ok(BaseResponse<GetTaskDto>.SuccessResponse(task));
     }
 
     /// <summary>
@@ -73,16 +73,16 @@ public class TasksController : ControllerBase
     {
         if (!await _context.Projects.AnyAsync(x => x.Id == taskDto.ProjectId))
         {
-            var errorResponse = BaseResponse<object>.ErrorResponse("Invalid project ID!");
-            return BadRequest(errorResponse);
+            _logger.LogWarning("AddTask failed. Invalid ProjectId: {ProjectId}", taskDto.ProjectId);
+            return BadRequest(BaseResponse<object>.ErrorResponse("Invalid project ID!"));
         }
 
         var newTask = taskDto.Adapt<Task>();
         await _context.Tasks.AddAsync(newTask);
         await _context.SaveChangesAsync();
 
-        var response = BaseResponse<object>.SuccessResponse(null, "Task added successfully");
-        return CreatedAtAction(nameof(GetTaskById), new { id = newTask.Id }, response);
+        _logger.LogInformation("AddTask executed successfully for TaskId: {TaskId}", newTask.Id);
+        return CreatedAtAction(nameof(GetTaskById), new { id = newTask.Id }, BaseResponse<object>.SuccessResponse(null, "Task added successfully"));
     }
 
     /// <summary>
@@ -99,22 +99,22 @@ public class TasksController : ControllerBase
     {
         if (string.IsNullOrEmpty(name))
         {
-            var errorResponse = BaseResponse<object>.ErrorResponse("Name cannot be null or empty");
-            return BadRequest(errorResponse);
+            _logger.LogWarning("UpdateTaskName failed. Name is null or empty for Id: {Id}", id);
+            return BadRequest(BaseResponse<object>.ErrorResponse("Name cannot be null or empty"));
         }
 
         var task = await _context.Tasks.FindAsync(id);
 
         if (task is null)
         {
-            var errorResponse = BaseResponse<object>.ErrorResponse($"No task found with Id {id}");
-            return NotFound(errorResponse);
+            _logger.LogWarning("UpdateTaskName failed. No task found with Id: {Id}", id);
+            return NotFound(BaseResponse<object>.ErrorResponse($"No task found with Id {id}"));
         }
 
         task.Name = name;
         await _context.SaveChangesAsync();
 
-        var response = BaseResponse<object>.SuccessResponse(null, "Task name updated successfully");
+        _logger.LogInformation("UpdateTaskName executed successfully for Id: {Id}", id);
         return NoContent();
     }
 
@@ -134,8 +134,8 @@ public class TasksController : ControllerBase
 
         if (task is null)
         {
-            var errorResponse = BaseResponse<object>.ErrorResponse($"No task found with Id {id}");
-            return NotFound(errorResponse);
+            _logger.LogWarning("UpdateTaskStatus failed. No task found with Id: {Id}", id);
+            return NotFound(BaseResponse<object>.ErrorResponse($"No task found with Id {id}"));
         }
 
         task.StatusId = statusId;
@@ -144,7 +144,7 @@ public class TasksController : ControllerBase
 
         await _context.SaveChangesAsync();
 
-        var response = BaseResponse<object>.SuccessResponse(null, "Task status updated successfully");
+        _logger.LogInformation("UpdateTaskStatus executed successfully for TaskId: {TaskId}", id);
         return NoContent();
     }
 
@@ -162,11 +162,11 @@ public class TasksController : ControllerBase
 
         if (rows > 0)
         {
-            var response = BaseResponse<object>.SuccessResponse(null, "Task deleted successfully");
-            return Ok(response);
+            _logger.LogInformation("DeleteTask executed successfully for Id: {Id}", id);
+            return Ok(BaseResponse<object>.SuccessResponse(null, "Task deleted successfully"));
         }
 
-        var errorResponse = BaseResponse<object>.ErrorResponse($"No task found with Id {id}");
-        return NotFound(errorResponse);
+        _logger.LogWarning("DeleteTask failed. No task found with Id: {Id}", id);
+        return NotFound(BaseResponse<object>.ErrorResponse($"No task found with Id {id}"));
     }
 }

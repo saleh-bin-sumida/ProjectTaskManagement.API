@@ -1,4 +1,5 @@
 using ProjectTaskManagement.API;
+using Serilog;
 using Swashbuckle.AspNetCore.SwaggerUI;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -8,6 +9,12 @@ builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 builder.Services.ConfigMapster();
 
+builder.Host.UseSerilog((context, services, configuration) =>
+    configuration
+        .ReadFrom.Configuration(context.Configuration)
+        .ReadFrom.Services(services)
+        .Enrich.FromLogContext()
+);
 
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
@@ -40,7 +47,7 @@ app.Use(async (context, next) =>
     await next();
 });
 
-
+app.UseSerilogRequestLogging();
 app.UseHttpsRedirection();
 
 app.UseAuthorization();
