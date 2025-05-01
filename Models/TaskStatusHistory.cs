@@ -15,6 +15,11 @@ public class TaskStatusHistory
 
     public DateTime Date { get; set; }
 
+    public TaskStatusHistory()
+    {
+
+    }
+
     public TaskStatusHistory(int statusId, int taskAssignmentId)
     {
         this.StatusId = statusId;
