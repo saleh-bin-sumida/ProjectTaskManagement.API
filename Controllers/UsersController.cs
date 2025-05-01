@@ -1,0 +1,139 @@
+﻿namespace UserTaskManagement.API.Controllers;
+
+[ApiController]
+public class UsersController : ControllerBase
+{
+    private readonly AppDbContext _context;
+
+    public UsersController(AppDbContext context)
+    {
+        _context = context;
+    }
+
+    #region User Endpoints
+
+    /// <summary>
+    /// Retrieves all users with optional search and pagination.
+    /// </summary>
+    /// <param name="pageNumber">The page number.</param>
+    /// <param name="pageSize">The number of items per page.</param>
+    /// <param name="searchTerm">The search term to filter users.</param>
+    /// <returns>A paginated list of users.</returns>
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [HttpGet(ApiSystemRouts.Users.GetAll)]
+    public async Task<IActionResult> GetAllUsers(int pageNumber, int pageSize, string? searchTerm)
+    {
+        var query = _context.Users.AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            query = query.Where(u => u.FirstName.Contains(searchTerm)
+                || u.LastName.Contains(searchTerm)
+                || u.Email.Contains(searchTerm));
+        }
+
+        var totalRecords = await query.CountAsync();
+
+        var users = await query
+            .Select(UserMapper.GetDto())
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        var pagedResult = PagedResult<GetUserDto>.Create(users, totalRecords, pageNumber, pageSize);
+
+        var response = BaseResponse<PagedResult<GetUserDto>>.SuccessResponse(pagedResult);
+        return Ok(response);
+    }
+
+    /// <summary>
+    /// Retrieves a user by their ID.
+    /// </summary>
+    /// <param name="id">The ID of the user.</param>
+    /// <returns>The user with the specified ID.</returns>
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [HttpGet(ApiSystemRouts.Users.GetById)]
+    public async Task<IActionResult> GetUserById(int id)
+    {
+        var user = await _context.Users
+            .Select(UserMapper.GetDto())
+            .SingleOrDefaultAsync(x => x.Id == id);
+
+        if (user is null)
+        {
+            var errorResponse = BaseResponse<object>.ErrorResponse($"No user found with Id {id}");
+            return NotFound(errorResponse);
+        }
+
+        var response = BaseResponse<GetUserDto>.SuccessResponse(null);
+        return Ok(response);
+    }
+
+    /// <summary>
+    /// Adds a new user.
+    /// </summary>
+    /// <param name="userDto">The user data transfer object.</param>
+    /// <returns>The created user.</returns>
+    [ProducesResponseType(StatusCodes.Status201Created)]
+    [HttpPost(ApiSystemRouts.Users.Add)]
+    public async Task<IActionResult> AddUser(AddUserDto userDto)
+    {
+        var newUser = userDto.ToUser();
+        await _context.Users.AddAsync(newUser);
+        await _context.SaveChangesAsync();
+
+        var response = BaseResponse<object>.SuccessResponse(null, "User added successfully");
+        return CreatedAtAction(nameof(GetUserById), new { id = newUser.Id }, response);
+    }
+
+    /// <summary>
+    /// Updates an existing user.
+    /// </summary>
+    /// <param name="id">The ID of the user to update.</param>
+    /// <param name="userDto">The updated user data.</param>
+    /// <returns>A success or error message.</returns>
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [HttpPut(ApiSystemRouts.Users.Update)]
+    public async Task<IActionResult> UpdateUser(int id, UpdateUserDto userDto)
+    {
+        var user = await _context.Users.FindAsync(id);
+
+        if (user is null)
+        {
+            var errorResponse = BaseResponse<object>.ErrorResponse($"No user found with Id {id}");
+            return NotFound(errorResponse);
+        }
+
+        user.Update(userDto);
+        await _context.SaveChangesAsync();
+
+        var response = BaseResponse<object>.SuccessResponse(null, "User updated successfully");
+        return Ok(response);
+    }
+
+    /// <summary>
+    /// Deletes a user by their ID.
+    /// </summary>
+    /// <param name="id">The ID of the user to delete.</param>
+    /// <returns>A success or error message.</returns>
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [HttpDelete(ApiSystemRouts.Users.Delete)]
+    public async Task<IActionResult> DeleteUser(int id)
+    {
+        var rows = await _context.Users.Where(x => x.Id == id).ExecuteDeleteAsync();
+
+        if (rows > 0)
+        {
+            var response = BaseResponse<object>.SuccessResponse(null, "User deleted successfully");
+            return Ok(response);
+        }
+
+        var errorResponse = BaseResponse<object>.ErrorResponse($"No user found with Id {id}");
+        return NotFound(errorResponse);
+    }
+
+    #endregion
+}
