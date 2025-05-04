@@ -20,6 +20,6 @@ public class BaseResponse<T>
 
     public static BaseResponse<T> ErrorResponse(string message, T? data = default)
     {
-        return new BaseResponse<T>(false, message, default);
+        return new BaseResponse<T>(false, message, data);
     }
 }
